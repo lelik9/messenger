@@ -1,4 +1,5 @@
 # coding=utf-8
+from sqlalchemy.orm import exc
 from datetime import datetime
 
 from db_func import db
@@ -44,9 +45,12 @@ def add_chat_room(chat_id, user1, user2):
 
 
 def get_room_id(user1, user2):
-    return db.session.query(ChatRooms).filter(ChatRooms.user_id.in_((user1, user2)),
-                                              Chats.chat_type == 'single').group_by(
-        ChatRooms.chat_id).one()
+    try:
+        return db.session.query(ChatRooms).filter(ChatRooms.user_id.in_((user1, user2)),
+                                                  Chats.chat_type == 'single').group_by(
+            ChatRooms.chat_id).one()
+    except exc.NoResultFound:
+        return False
 
 
 def get_room_users(chat_id):
@@ -59,9 +63,21 @@ def get_user_undelivered_message(user_id):
 
 
 def change_message_status(message_id):
-    message = db.session.query(Messages).filter(Messages.id == message_id).one()
-
-    if message:
+    try:
+        message = db.session.query(Messages).filter(Messages.id == message_id).one()
         message.deliver = True
         db.session.dirty
         db.session.commit()
+    except exc.NoResultFound:
+        return False
+
+
+def get_users_list(user_id):
+    return db.session.query(Users.id, Users.nickname).filter(Users.id != user_id).all()
+
+
+def get_last_messages(user1, user2, range, last):
+    return db.session.query(Messages).filter(ChatRooms.user_id.in_((user1, user2)),
+                                              Chats.chat_type == 'single',
+                                             Messages.id < last).order_by(Messages.id.desc()).limit(
+        range).all()

@@ -57,3 +57,20 @@ class MessageDeliverHandler(tornado.web.RequestHandler):
         if status == 'true':
             models_function.change_message_status(message_id)
 
+
+class UsersListHandler(tornado.web.RequestHandler):
+    def get(self, *args, **kwargs):
+        my_id = self.get_argument('my_id')
+
+        users = models_function.get_users_list(my_id)
+        # users = [user.__dict__ for user in users]
+        print(users)
+        self.write(dict(users=users))
+
+
+class MessageRangeHandler(tornado.web.RequestHandler):
+    def get(self, *args, **kwargs):
+        res = models_function.get_last_messages(1, 2, 5, 4)
+
+        for r in res:
+            print(r.id)

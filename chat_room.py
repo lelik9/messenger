@@ -28,10 +28,10 @@ class Rooms:
         if not room:
             room = self.create_user_room(user1, user2)
 
-        if room.chat_id not in self.all_rooms.keys():
-            room = self.register_user_room(room.chat_id, user1, user2)
+        if room.id not in self.all_rooms.keys():
+            room = self.register_user_room(room.id, user1, user2)
         else:
-            room = self.all_rooms.get(room.chat_id)
+            room = self.all_rooms.get(room.id)
 
         return room
 
@@ -104,12 +104,13 @@ class Room:
         self._messages = BaseMessage(self.id)
 
     def add_message(self, message, user_id, chat_id):
-        # self._messages.add_message(message=message, user_id=user_id, chat_id=chat_id)
+        self._messages.add_message(message=message, user_id=user_id, chat_id=chat_id)
 
         for user in self.users:
             if user != int(user_id):
                 waiting = rooms.get_waiting(str(user))
-                waiting.set_result(self._messages.get_message(1))
+                if waiting is not None:
+                    waiting.set_result(self._messages.get_message(1))
 
 
 rooms = Rooms()
