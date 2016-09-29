@@ -22,8 +22,8 @@ class MessageNewHandler(tornado.web.RequestHandler):
         message = self.get_argument('message')
         chat_id = self.get_argument('chat_id')
 
-        if chat_id == '0':
-            room = rooms.get_group_room(chat_id, users)
+        if chat_id != '0':
+            room = rooms.get_group_room(chat_id)
         else:
             room = rooms.get_user_room(users)
 
@@ -31,6 +31,7 @@ class MessageNewHandler(tornado.web.RequestHandler):
             room.add_message(user_id=users[0], message=message, chat_id=room.id)
         else:
             self.write(dict(error='Chat not found'))
+
 
 class MessageUpdatesHandler(tornado.web.RequestHandler):
     @gen.coroutine
@@ -74,8 +75,7 @@ class UsersListHandler(tornado.web.RequestHandler):
         my_id = self.get_argument('my_id')
 
         users = models_function.get_users_list(my_id)
-        # users = [user.__dict__ for user in users]
-        print(users)
+
         self.write(dict(users=users))
 
 
