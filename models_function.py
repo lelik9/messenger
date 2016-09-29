@@ -36,17 +36,14 @@ def add_room(name, chat_type):
     return new_chat
 
 
-def add_chat_room(chat_id, user1, user2):
-    user1_room = ChatRooms(chat_id=chat_id, user_id=user1)
-    user2_room = ChatRooms(chat_id=chat_id, user_id=user2)
-
-    db.add(user1_room)
-    db.add(user2_room)
+def add_chat_room(chat_id, users):
+    for user in users:
+        db.add(ChatRooms(chat_id=chat_id, user_id=user))
 
 
-def get_room_id(user1, user2):
+def get_room_id(users):
     try:
-        return db.session.query(ChatRooms).filter(ChatRooms.user_id.in_((user1, user2)),
+        return db.session.query(ChatRooms).filter(ChatRooms.user_id.in_(users),
                                                   Chats.chat_type == 'single').group_by(
             ChatRooms.chat_id).one()
     except exc.NoResultFound:

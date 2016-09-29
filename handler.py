@@ -10,9 +10,6 @@ from tornado import gen
 
 class MessageNewHandler(tornado.web.RequestHandler):
     def post(self):
-        pass
-
-    def get(self, *args, **kwargs):
         my_id = self.get_argument('my_id')
         user_id = self.get_argument('user_id')
         message = self.get_argument('message')
@@ -20,6 +17,20 @@ class MessageNewHandler(tornado.web.RequestHandler):
         room = rooms.get_user_room(my_id, user_id)
         room.add_message(user_id=my_id, message=message, chat_id=room.id)
 
+    def get(self, *args, **kwargs):
+        users = self.get_argument('users').split(',')
+        message = self.get_argument('message')
+        chat_id = self.get_argument('chat_id')
+
+        if chat_id == '0':
+            room = rooms.get_group_room(chat_id, users)
+        else:
+            room = rooms.get_user_room(users)
+
+        if room:
+            room.add_message(user_id=users[0], message=message, chat_id=room.id)
+        else:
+            self.write(dict(error='Chat not found'))
 
 class MessageUpdatesHandler(tornado.web.RequestHandler):
     @gen.coroutine
@@ -74,3 +85,19 @@ class MessageRangeHandler(tornado.web.RequestHandler):
 
         for r in res:
             print(r.id)
+
+
+class GroupHandler(tornado.web.RequestHandler):
+    def get(self, *args, **kwargs):
+        pass
+
+    def post(self, *args, **kwargs):
+        """
+        Create group chat
+        :param args:
+        :param kwargs:
+        :return:
+        """
+
+        my_id = self.get_argument('my_id')
+        group_name = self.get_argument('group_name')

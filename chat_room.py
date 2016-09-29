@@ -22,14 +22,14 @@ class Rooms:
         for room in rooms:
             self.register_room(room)
 
-    def get_user_room(self, user1, user2):
-        room = models_function.get_room_id(user1, user2)
+    def get_user_room(self, users):
+        room = models_function.get_room_id(users)
 
         if not room:
-            room = self.create_user_room(user1, user2)
+            room = self.create_user_room(users)
 
         if room.id not in self.all_rooms.keys():
-            room = self.register_user_room(room.id, user1, user2)
+            room = self.register_user_room(room.id, users)
         else:
             room = self.all_rooms.get(room.id)
 
@@ -43,29 +43,31 @@ class Rooms:
         new_room = Room(users=users, room_id=room_id, room_type=room_type)
         self.all_rooms.update({room_id: new_room})
 
-    def register_user_room(self, room_id, user1, user2):
-        new_room = Room(users=[user1, user2], room_id=room_id)
+    def register_user_room(self, room_id, users):
+        new_room = Room(users=users, room_id=room_id)
         new_room.id = room_id
         self.all_rooms.update({room_id: new_room})
 
         return new_room
 
-    def create_user_room(self, user1, user2):
+    @staticmethod
+    def create_user_room(users):
         chat = models_function.add_room('', 'single')
-        models_function.add_chat_room(chat.id, user1, user2)
+        models_function.add_chat_room(chat.id, users)
         return chat
 
     def get_group_room(self, room_id):
         if room_id in self.all_rooms.keys():
             room = self.all_rooms.get(room_id)
         else:
-            room = self.create_room()
-
+            return
         return room
 
-    def create_room(self):
-        room = Room()
-        room.id = random.random()
+    def create_group_room(self, users, group_name):
+        chat = models_function.add_room(group_name, 'group')
+        models_function.add_chat_room(chat.id, users)
+
+        room = Room(users=users, room_id=chat.id, room_type='group')
         self.all_rooms.update({room.id: room})
 
         return room
@@ -97,7 +99,7 @@ class Rooms:
 
 class Room:
 
-    def __init__(self, users, room_id, room_type='single'):
+    def __init__(self, *, users, room_id, room_type='single'):
         self.id = room_id
         self.users = users
         self.room_type = room_type
