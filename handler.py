@@ -8,6 +8,13 @@ from chat_room import rooms
 from tornado import gen
 
 
+def write(*, req, msg_type, msg):
+    req.write({
+        'type': msg_type,
+        'result': msg,
+    })
+
+
 class MessageNewHandler(tornado.web.RequestHandler):
     def post(self):
         my_id = self.get_argument('my_id')
@@ -53,12 +60,12 @@ class MessageUpdatesHandler(tornado.web.RequestHandler):
                     'sender': message.sender_id,
                     'deliver': message.deliver
                 }})
-            self.write(dict(messages=msg))
+            write(req=self, msg_type='message', msg=msg)
         else:
             waiting = rooms.add_waiting(my_id)
             message = yield waiting
 
-            self.write(dict(messages=message))
+            write(req=self, msg_type='message', msg=message)
 
 
 class MessageDeliverHandler(tornado.web.RequestHandler):
@@ -76,15 +83,28 @@ class UsersListHandler(tornado.web.RequestHandler):
 
         users = models_function.get_users_list(my_id)
 
-        self.write(dict(users=users))
+        write(req=self, msg_type='users', msg=users)
 
 
 class MessageRangeHandler(tornado.web.RequestHandler):
     def get(self, *args, **kwargs):
-        res = models_function.get_last_messages(1, 2, 5, 4)
+        users = self.get_argument('users').split(',')
+        range = int(self.get_argument('range'))
+        last_message = int(self.get_argument('last_message'))
 
-        for r in res:
-            print(r.id)
+        messages = models_function.get_last_messages(users=users, range=range, last=last_message)
+
+        msg = {}
+
+        for message in messages:
+            msg.update({message.id: {
+                'ts': time.mktime(message.date.timetuple()),
+                'message': message.message,
+                'sender': message.sender_id,
+                'deliver': message.deliver
+            }})
+
+        write(req=self, msg_type='message', msg=msg)
 
 
 class GroupHandler(tornado.web.RequestHandler):

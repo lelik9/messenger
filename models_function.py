@@ -73,8 +73,8 @@ def get_users_list(user_id):
     return db.session.query(Users.id, Users.nickname).filter(Users.id != user_id).all()
 
 
-def get_last_messages(user1, user2, range, last):
-    return db.session.query(Messages).filter(ChatRooms.user_id.in_((user1, user2)),
+def get_last_messages(*, users, range, last):
+    return db.session.query(Messages).filter(ChatRooms.user_id.in_(users),
                                               Chats.chat_type == 'single',
                                              Messages.id < last).order_by(Messages.id.desc()).limit(
         range).all()
