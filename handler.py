@@ -25,17 +25,14 @@ class MessageNewHandler(tornado.web.RequestHandler):
         room.add_message(user_id=my_id, message=message, chat_id=room.id)
 
     def get(self, *args, **kwargs):
-        users = self.get_argument('users').split(',')
+        user = self.get_argument('user')
         message = self.get_argument('message')
         chat_id = self.get_argument('chat_id')
 
-        if chat_id != '0':
-            room = rooms.get_group_room(chat_id)
-        else:
-            room = rooms.get_user_room(users)
+        room = rooms.get_room(chat_id)
 
         if room:
-            room.add_message(user_id=users[0], message=message, chat_id=room.id)
+            room.add_message(user_id=user, message=message, chat_id=room.id)
         else:
             self.write(dict(error='Chat not found'))
 
@@ -107,17 +104,36 @@ class MessageRangeHandler(tornado.web.RequestHandler):
         write(req=self, msg_type='message', msg=msg)
 
 
-class GroupHandler(tornado.web.RequestHandler):
+class ChatHandler(tornado.web.RequestHandler):
     def get(self, *args, **kwargs):
-        pass
-
-    def post(self, *args, **kwargs):
         """
-        Create group chat
+        Get users chat rooms.
         :param args:
         :param kwargs:
         :return:
         """
 
-        my_id = self.get_argument('my_id')
+        # STUB!
+        users = self.get_argument('users').split(',')
         group_name = self.get_argument('group_name')
+        group_type = self.get_argument('group_type')
+
+        room_id = rooms.create_group_room(users=users, group_name=group_name, group_type=group_type)
+
+        write(req=self, msg_type='group', msg={'room_id': room_id})
+
+    def post(self, *args, **kwargs):
+        """
+        Create new chat room (private or group)
+        :param args:
+        :param kwargs:
+        :return:
+        """
+
+        users = self.get_argument('users').split(',')
+        group_name = self.get_argument('group_name')
+        group_type = self.get_argument('group_type')
+
+        room_id = rooms.create_group_room(users=users, group_name=group_name, group_type=group_type)
+
+        write(req=self, msg_type='group', msg={'room_id': room_id})

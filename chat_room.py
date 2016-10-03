@@ -22,55 +22,56 @@ class Rooms:
         for room in rooms:
             self.register_room(room)
 
-    def get_user_room(self, users):
-        room = models_function.get_room_id(users)
-
-        if not room:
-            room = self.create_user_room(users)
-
-        if room.id not in self.all_rooms.keys():
-            room = self.register_user_room(room.id, users)
-        else:
-            room = self.all_rooms.get(room.id)
-
-        return room
-
+    # def get_user_room(self, users):
+    #     room = models_function.get_room_id(users)
+    #     print(room.id)
+    #
+    #     if not room:
+    #         room = self.create_user_room(users)
+    #
+    #     if room.id not in self.all_rooms.keys():
+    #         room = self.register_user_room(room.id, users)
+    #     else:
+    #         room = self.all_rooms.get(room.id)
+    #
+    #     return room
+    #
     def register_room(self, room_model):
         room_id = room_model.id
         room_type = room_model.chat_type
-        users = [model.user_id for model in models_function.get_room_users(room_id)]
+        users = [user[0] for user in models_function.get_room_users(room_id)]
 
         new_room = Room(users=users, room_id=room_id, room_type=room_type)
         self.all_rooms.update({room_id: new_room})
-
-    def register_user_room(self, room_id, users):
-        new_room = Room(users=users, room_id=room_id)
-        new_room.id = room_id
-        self.all_rooms.update({room_id: new_room})
-
         return new_room
+    #
+    # def register_user_room(self, room_id, users):
+    #     new_room = Room(users=users, room_id=room_id)
+    #     new_room.id = room_id
+    #     self.all_rooms.update({room_id: new_room})
+    #
+    #     return new_room
+    #
+    # @staticmethod
+    # def create_user_room(users):
+    #     chat = models_function.create_chat_room('', 'single')
+    #     models_function.add_chat_room(chat.id, users)
+    #     return chat
 
-    @staticmethod
-    def create_user_room(users):
-        chat = models_function.add_room('', 'single')
-        models_function.add_chat_room(chat.id, users)
-        return chat
-
-    def get_group_room(self, room_id):
+    def get_room(self, room_id):
         if room_id in self.all_rooms.keys():
             room = self.all_rooms.get(room_id)
         else:
-            return
+            room = models_function.get_room(room_id)
+            room = self.register_room(room)
         return room
 
-    def create_group_room(self, users, group_name):
-        chat = models_function.add_room(group_name, 'group')
+    @staticmethod
+    def create_group_room(users, group_name, group_type):
+        chat = models_function.create_chat_room(group_name, group_type)
         models_function.add_chat_room(chat.id, users)
 
-        room = Room(users=users, room_id=chat.id, room_type='group')
-        self.all_rooms.update({room.id: room})
-
-        return room
+        return chat.id
 
     def add_waiting(self, id):
         """
@@ -99,20 +100,22 @@ class Rooms:
 
 class Room:
 
-    def __init__(self, *, users, room_id, room_type='single'):
+    def __init__(self, *, users, room_id, room_type='private'):
         self.id = room_id
         self.users = users
         self.room_type = room_type
-        self._messages = BaseMessage(self.id)
+        self._messages = BaseMessage(self.id, self.users)
 
     def add_message(self, message, user_id, chat_id):
-        self._messages.add_message(message=message, user_id=user_id, chat_id=chat_id)
+        message_id = self._messages.add_message(message=message, user_id=user_id, chat_id=chat_id)
+        # self._messages.set_message_undelivered(users=self.users, message_id=message_id)
 
         for user in self.users:
             if user != int(user_id):
+                self._messages.change_status(message_id=message_id, user=user, status=False)
                 waiting = rooms.get_waiting(str(user))
                 if waiting is not None:
-                    waiting.set_result(self._messages.get_message(1))
+                    waiting.set_result(self._messages.get_message())
 
 
 rooms = Rooms()

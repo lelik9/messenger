@@ -3,7 +3,7 @@ from sqlalchemy.orm import exc
 from datetime import datetime
 
 from db_func import db
-from models import Messages, Users, Chats, ChatRooms
+from models import Messages, Users, Chats, ChatRooms, DeliverMessage
 
 
 def add_message(*, message, user_id, chat_id):
@@ -16,13 +16,26 @@ def add_message(*, message, user_id, chat_id):
     return new_message
 
 
-def get_undelivered_message(chat_id):
+def set_message_undelivered(user, message_id, status):
+    deliver = DeliverMessage(user_id=user, message_id=message_id, deliver=status)
+    db.add(deliver)
+
+
+def get_undelivered_message(chat_id, users):
+    print(users)
     return db.session.query(Messages).filter(Messages.chat_id == chat_id,
-                                             Messages.deliver == 0).all()
+                                             ChatRooms.chat_id == chat_id,
+                                             DeliverMessage.deliver == 0,
+                                             DeliverMessage.user_id.in_(users)).all()
+    # return db.session.query(Messages).filter(Messages.chat_id == chat_id,
+    #                                          Messages.deliver == 0).all()
 
 
 def get_rooms_with_undelivered_message():
-    return db.session.query(Chats).filter(Chats.id == Messages.chat_id, Messages.deliver == 0).all()
+    return db.session.query(Chats).filter(Chats.id == Messages.chat_id,
+                                          Messages.id == DeliverMessage.message_id,
+                                          DeliverMessage.deliver == 0)
+    # return db.session.query(Chats).filter(Chats.id == Messages.chat_id, Messages.deliver == 0).all()
 
 
 def add_user(nick):
@@ -30,7 +43,7 @@ def add_user(nick):
     db.add(new_user)
 
 
-def add_room(name, chat_type):
+def create_chat_room(name, chat_type):
     new_chat = Chats(chat_name=name, chat_type=chat_type)
     db.add(new_chat)
     return new_chat
@@ -41,17 +54,15 @@ def add_chat_room(chat_id, users):
         db.add(ChatRooms(chat_id=chat_id, user_id=user))
 
 
-def get_room_id(users):
+def get_room(room_id):
     try:
-        return db.session.query(ChatRooms).filter(ChatRooms.user_id.in_(users),
-                                                  Chats.chat_type == 'single').group_by(
-            ChatRooms.chat_id).one()
+        return db.session.query(Chats).filter(Chats.id == room_id).one()
     except exc.NoResultFound:
         return False
 
 
 def get_room_users(chat_id):
-    return db.session.query(ChatRooms).filter(ChatRooms.chat_id == chat_id).all()
+    return db.session.query(ChatRooms.user_id).filter(ChatRooms.chat_id == chat_id).all()
 
 
 def get_user_undelivered_message(user_id):

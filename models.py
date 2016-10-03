@@ -40,6 +40,14 @@ class Messages(Base):
     date = Column(DateTime(), nullable=False, default=datetime.now())
     sender_id = Column(Integer(), ForeignKey('users.id'))
     user = relationship(Users)
-    deliver = Column(Boolean(), nullable=False, default=False)
     chat_id = Column(Integer(), ForeignKey('chats.id'))
     chat = relationship(Chats)
+
+
+class DeliverMessage(Base):
+    __tablename__ = 'deliver_messages'
+
+    id = Column(Integer(), primary_key=True)
+    deliver = Column(Boolean(), nullable=False, default=False)
+    user_id = Column(Integer(), ForeignKey('users.id'))
+    message_id = Column(Integer(), ForeignKey('messages.id'))
