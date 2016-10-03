@@ -32,7 +32,7 @@ class MessageNewHandler(tornado.web.RequestHandler):
         room = rooms.get_room(chat_id)
 
         if room:
-            room.add_message(user_id=user, message=message, chat_id=room.id)
+            room.add_message(user_id=user, message=message)
         else:
             self.write(dict(error='Chat not found'))
 
@@ -69,9 +69,13 @@ class MessageDeliverHandler(tornado.web.RequestHandler):
     def get(self, *args, **kwargs):
         message_id = self.get_argument('message_id')
         status = self.get_argument('status')
+        user = self.get_argument('user')
+        chat_id = self.get_argument('chat_id')
 
-        if status == 'true':
-            models_function.change_message_status(message_id)
+        room = rooms.get_room(chat_id)
+
+        if room:
+            room.change_message_status(user=user, message_id=message_id, status=status)
 
 
 class UsersListHandler(tornado.web.RequestHandler):

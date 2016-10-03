@@ -106,9 +106,8 @@ class Room:
         self.room_type = room_type
         self._messages = BaseMessage(self.id, self.users)
 
-    def add_message(self, message, user_id, chat_id):
-        message_id = self._messages.add_message(message=message, user_id=user_id, chat_id=chat_id)
-        # self._messages.set_message_undelivered(users=self.users, message_id=message_id)
+    def add_message(self, message, user_id):
+        message_id = self._messages.add_message(message=message, user_id=user_id, chat_id=self.id)
 
         for user in self.users:
             if user != int(user_id):
@@ -116,6 +115,10 @@ class Room:
                 waiting = rooms.get_waiting(str(user))
                 if waiting is not None:
                     waiting.set_result(self._messages.get_message())
+
+    def change_message_status(self, user, message_id, status):
+        if status == 'true':
+            self._messages.change_status(message_id=message_id, user=user, status=True)
 
 
 rooms = Rooms()

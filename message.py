@@ -7,14 +7,7 @@ from datetime import datetime
 
 class BaseMessage:
     messages = {}
-
-    """
-            self.message = {
-            'ts': time.mktime(datetime.now().timetuple()),
-            'type': self.type,
-            'message': mes
-        }
-    """
+    deliver = {}
 
     def __init__(self, room_id, users):
         """
@@ -30,9 +23,12 @@ class BaseMessage:
                         'ts': time.mktime(message.date.timetuple()),
                         'message': message.message,
                         'sender': message.sender_id,
-                        'deliver': message.deliver,
                         'chat_id': room_id,
                     }})
+                users = [user[0] for user in models_function.get_undelivered_users(message.id)]
+                self.deliver.update({message.id: users})
+
+        print(self.messages, self.deliver)
 
     def add_message(self, user_id, message, chat_id):
         """
@@ -44,7 +40,6 @@ class BaseMessage:
             'ts': time.mktime(datetime.now().timetuple()),
             'message': message,
             'sender': user_id,
-            'deliver': False
         }
 
         db_message = models_function.add_message(chat_id=chat_id, user_id=user_id,
@@ -52,13 +47,17 @@ class BaseMessage:
         self.messages.update({db_message.id: new_message})
         return db_message.id
 
-    # def set_message_undelivered(self, users, message_id):
-    #     models_function.set_message_undelivered(user=user, message_id=message_id)
-
     def change_status(self, message_id, status, user):
-        models_function.set_message_undelivered(user=user, message_id=message_id, status=status)
-        # if mess_id in self.messages.keys():
-        #     self.messages.pop(mess_id)
+        if status:
+            models_function.change_message_status(message_id, user_id=user)
+            try:
+                self.deliver[int(message_id)].remove(int(user))
+            except ValueError:
+                pass
+            if not self.deliver[int(message_id)]:
+                self.messages.pop(int(message_id))
+        else:
+            models_function.set_message_undelivered(user=user, message_id=message_id, status=status)
 
     def get_message(self):
         return self.messages

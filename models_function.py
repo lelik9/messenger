@@ -70,9 +70,10 @@ def get_user_undelivered_message(user_id):
                                              user_id, Messages.deliver == 0).all()
 
 
-def change_message_status(message_id):
+def change_message_status(message_id, user_id):
     try:
-        message = db.session.query(Messages).filter(Messages.id == message_id).one()
+        message = db.session.query(DeliverMessage).filter(DeliverMessage.message_id == message_id,
+                                                          DeliverMessage.user_id == user_id).one()
         message.deliver = True
         db.session.dirty
         db.session.commit()
@@ -86,6 +87,11 @@ def get_users_list(user_id):
 
 def get_last_messages(*, users, range, last):
     return db.session.query(Messages).filter(ChatRooms.user_id.in_(users),
-                                              Chats.chat_type == 'single',
+                                             Chats.chat_type == 'single',
                                              Messages.id < last).order_by(Messages.id.desc()).limit(
         range).all()
+
+
+def get_undelivered_users(message_id):
+    return db.session.query(DeliverMessage.user_id).filter(DeliverMessage.message_id == message_id,
+                                                           DeliverMessage.deliver == 0).all()
