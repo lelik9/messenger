@@ -15,16 +15,8 @@ def write(*, req, msg_type, msg):
     })
 
 
-class MessageNewHandler(tornado.web.RequestHandler):
+class MessageHandler(tornado.web.RequestHandler):
     def post(self):
-        my_id = self.get_argument('my_id')
-        user_id = self.get_argument('user_id')
-        message = self.get_argument('message')
-
-        room = rooms.get_user_room(my_id, user_id)
-        room.add_message(user_id=my_id, message=message, chat_id=room.id)
-
-    def get(self, *args, **kwargs):
         user = self.get_argument('user')
         message = self.get_argument('message')
         chat_id = self.get_argument('chat_id')
@@ -36,16 +28,10 @@ class MessageNewHandler(tornado.web.RequestHandler):
         else:
             self.write(dict(error='Chat not found'))
 
-
-class MessageUpdatesHandler(tornado.web.RequestHandler):
-    @gen.coroutine
-    def post(self):
-        pass
-
     @gen.coroutine
     def get(self, *args, **kwargs):
-        my_id = self.get_argument('my_id')
-        messages = models_function.get_user_undelivered_message(my_id)
+        user = self.get_argument('user')
+        messages = models_function.get_user_undelivered_message(user)
         print(messages)
         if messages:
             msg = {}
@@ -58,7 +44,34 @@ class MessageUpdatesHandler(tornado.web.RequestHandler):
                 }})
             write(req=self, msg_type='message', msg=msg)
         else:
-            waiting = rooms.add_waiting(my_id)
+            waiting = rooms.add_waiting(user)
+            message = yield waiting
+
+            write(req=self, msg_type='message', msg=message)
+
+
+class MessageUpdatesHandler(tornado.web.RequestHandler):
+    @gen.coroutine
+    def post(self):
+        pass
+
+    @gen.coroutine
+    def get(self, *args, **kwargs):
+        user = self.get_argument('user')
+        messages = models_function.get_user_undelivered_message(user)
+        print(messages)
+        if messages:
+            msg = {}
+
+            for message in messages:
+                msg.update({message.id: {
+                    'ts': time.mktime(message.date.timetuple()),
+                    'message': message.message,
+                    'sender': message.user.nickname,
+                }})
+            write(req=self, msg_type='message', msg=msg)
+        else:
+            waiting = rooms.add_waiting(user)
             message = yield waiting
 
             write(req=self, msg_type='message', msg=message)
@@ -79,9 +92,9 @@ class MessageDeliverHandler(tornado.web.RequestHandler):
 
 class UsersListHandler(tornado.web.RequestHandler):
     def get(self, *args, **kwargs):
-        my_id = self.get_argument('my_id')
+        user = self.get_argument('user')
 
-        users = models_function.get_users_list(my_id)
+        users = models_function.get_users_list(user)
 
         write(req=self, msg_type='users', msg=users)
 
