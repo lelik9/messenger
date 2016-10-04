@@ -6,7 +6,6 @@ from datetime import datetime
 
 
 class BaseMessage:
-    messages = {}
     deliver = {}
 
     def __init__(self, room_id, users):
@@ -14,21 +13,22 @@ class BaseMessage:
         Заполняем не доставленными сообщениями если для данной комнаты они есть
         :param room_id:
         """
+        self.messages = {}
+
         messages = models_function.get_undelivered_message(room_id, users)
-        print(messages)
+
         if messages:
             for message in messages:
+
                 self.messages.update({message.id:
                     {
                         'ts': time.mktime(message.date.timetuple()),
                         'message': message.message,
-                        'sender': message.sender_id,
+                        'sender': message.user.nickname,
                         'chat_id': room_id,
                     }})
                 users = [user[0] for user in models_function.get_undelivered_users(message.id)]
                 self.deliver.update({message.id: users})
-
-        print(self.messages, self.deliver)
 
     def add_message(self, user_id, message, chat_id):
         """
@@ -51,13 +51,18 @@ class BaseMessage:
         if status:
             models_function.change_message_status(message_id, user_id=user)
             try:
-                self.deliver[int(message_id)].remove(int(user))
+                self.deliver[message_id].remove(user)
             except ValueError:
                 pass
-            if not self.deliver[int(message_id)]:
-                self.messages.pop(int(message_id))
+            if not self.deliver[message_id]:
+                self.messages.pop(message_id)
         else:
             models_function.set_message_undelivered(user=user, message_id=message_id, status=status)
+
+            if message_id in self.deliver.keys():
+                self.deliver[message_id].append(user)
+            else:
+                self.deliver[message_id] = [user]
 
     def get_message(self):
         return self.messages

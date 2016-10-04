@@ -46,7 +46,7 @@ class MessageUpdatesHandler(tornado.web.RequestHandler):
     def get(self, *args, **kwargs):
         my_id = self.get_argument('my_id')
         messages = models_function.get_user_undelivered_message(my_id)
-
+        print(messages)
         if messages:
             msg = {}
 
@@ -54,8 +54,7 @@ class MessageUpdatesHandler(tornado.web.RequestHandler):
                 msg.update({message.id: {
                     'ts': time.mktime(message.date.timetuple()),
                     'message': message.message,
-                    'sender': message.sender_id,
-                    'deliver': message.deliver
+                    'sender': message.user.nickname,
                 }})
             write(req=self, msg_type='message', msg=msg)
         else:
@@ -67,9 +66,9 @@ class MessageUpdatesHandler(tornado.web.RequestHandler):
 
 class MessageDeliverHandler(tornado.web.RequestHandler):
     def get(self, *args, **kwargs):
-        message_id = self.get_argument('message_id')
+        message_id = int(self.get_argument('message_id'))
         status = self.get_argument('status')
-        user = self.get_argument('user')
+        user = int(self.get_argument('user'))
         chat_id = self.get_argument('chat_id')
 
         room = rooms.get_room(chat_id)

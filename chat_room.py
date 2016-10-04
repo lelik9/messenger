@@ -37,13 +37,14 @@ class Rooms:
     #     return room
     #
     def register_room(self, room_model):
-        room_id = room_model.id
-        room_type = room_model.chat_type
-        users = [user[0] for user in models_function.get_room_users(room_id)]
+        if room_model:
+            room_id = room_model.id
+            room_type = room_model.chat_type
+            users = [user[0] for user in models_function.get_room_users(room_id)]
 
-        new_room = Room(users=users, room_id=room_id, room_type=room_type)
-        self.all_rooms.update({room_id: new_room})
-        return new_room
+            new_room = Room(users=users, room_id=room_id, room_type=room_type)
+            self.all_rooms.update({room_id: new_room})
+            return new_room
     #
     # def register_user_room(self, room_id, users):
     #     new_room = Room(users=users, room_id=room_id)

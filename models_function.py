@@ -22,20 +22,16 @@ def set_message_undelivered(user, message_id, status):
 
 
 def get_undelivered_message(chat_id, users):
-    print(users)
     return db.session.query(Messages).filter(Messages.chat_id == chat_id,
                                              ChatRooms.chat_id == chat_id,
                                              DeliverMessage.deliver == 0,
                                              DeliverMessage.user_id.in_(users)).all()
-    # return db.session.query(Messages).filter(Messages.chat_id == chat_id,
-    #                                          Messages.deliver == 0).all()
 
 
 def get_rooms_with_undelivered_message():
     return db.session.query(Chats).filter(Chats.id == Messages.chat_id,
                                           Messages.id == DeliverMessage.message_id,
-                                          DeliverMessage.deliver == 0)
-    # return db.session.query(Chats).filter(Chats.id == Messages.chat_id, Messages.deliver == 0).all()
+                                          DeliverMessage.deliver == 0).all()
 
 
 def add_user(nick):
@@ -66,8 +62,11 @@ def get_room_users(chat_id):
 
 
 def get_user_undelivered_message(user_id):
-    return db.session.query(Messages).filter(ChatRooms.user_id == user_id, Messages.sender_id !=
-                                             user_id, Messages.deliver == 0).all()
+    return db.session.query(Messages).filter(ChatRooms.user_id == user_id,
+                                             Messages.chat_id == ChatRooms.chat_id,
+                                             Messages.sender_id != user_id,
+                                             DeliverMessage.user_id == user_id,
+                                             DeliverMessage.deliver == 0).all()
 
 
 def change_message_status(message_id, user_id):
