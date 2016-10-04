@@ -1,8 +1,14 @@
 # coding=utf-8
+import json
 import time
+import urllib
 
 from kivy.app import App
 from kivy.network.urlrequest import UrlRequest
+
+
+def on_error(req, err):
+    print('server error {}'.format(str(err)))
 
 
 class Api(object):
@@ -13,7 +19,10 @@ class Api(object):
             'GET': self.get,
             'POST': self.post
         }
+        self.header = {'Content-type': 'application/x-www-form-urlencoded',
+                       'Accept': 'text/plain'}
         self.callback = callback
+
         try:
             request = methods[method]
             request(url, **kwargs)
@@ -21,38 +30,42 @@ class Api(object):
             raise KeyError('method not found, use "GET" or "POST"')
 
     def get(self, url, **kwargs):
-        params = '&'.join(['='.join([k, v]) for k, v in kwargs])
+        params = '&'.join(['='.join([k, v]) for k, v in kwargs.items()])
         full_url = self.server + url + '?' + params
-        UrlRequest(url=full_url, on_success=self.on_success, on_error=self.on_error,
-                   on_failure=self.on_error)
+        UrlRequest(url=full_url, on_success=self.callback, on_error=on_error,
+                   on_failure=on_error)
 
     def post(self, url, **kwargs):
         full_url = self.server + url
-        UrlRequest(url=full_url, on_success=self.on_success, on_error=self.on_error,
-                   on_failure=self.on_error, req_body=kwargs)
+        params = urllib.urlencode(kwargs)
 
-    def on_error(self, err):
-        print('server error {}'.format(str(err)))
-
-    def on_success(self, req, response):
-        print('server response: ', response)
-        self.callback(response)
+        UrlRequest(url=full_url, on_success=self.callback, on_error=on_error,
+                   on_failure=on_error, req_body=params, req_headers=self.header)
 
 
 class UserApi(object):
-    user_id = 1
+    user_id = '2'
 
     @staticmethod
     def create_chat(name, chat_type, users, callback):
-        def chat_callback(response):
+        def chat_callback(req, response):
+            print('server response: ', response)
+            if response['type'] == 'error':
+                on_error(req, response['result'])
             callback()
 
         Api(url='/group/', method='POST', callback=chat_callback, group_name=name,
             group_type=chat_type, users=users)
 
     @classmethod
+    def set_delivered(cls,chat_id, message_id):
+        pass
+    @classmethod
     def send_message(cls, chat_id, message, callback):
-        def message_callback(response):
+        def message_callback(req, response):
+            print('server response: ', response)
+            if response['type'] == 'error':
+                on_error(req, response['result'])
             callback()
 
         Api(url='/message/', method='POST', callback=message_callback, user=cls.user_id,
@@ -60,14 +73,20 @@ class UserApi(object):
 
     @classmethod
     def update_message(cls, callback):
-        def update_callback(response):
+        def update_callback(req, response):
+            print('server response: ', response)
+            if response['type'] == 'error':
+                on_error(req, response['result'])
             callback()
 
         Api(url='/message/', method='GET', callback=update_callback, user=cls.user_id)
 
     @classmethod
     def get_message_range(cls, chat_id, message_id, range, callback):
-        def range_callback(response):
+        def range_callback(req, response):
+            print('server response: ', response)
+            if response['type'] == 'error':
+                on_error(req, response['result'])
             callback()
 
         Api(url='/message/range/', method='GET', callback=range_callback, chat_id=chat_id,
@@ -75,7 +94,10 @@ class UserApi(object):
 
     @classmethod
     def get_users_list(cls, callback):
-        def users_callback(response):
+        def users_callback(req, response):
+            print('server response: ', response)
+            if response['type'] == 'error':
+                on_error(req, response['result'])
             callback()
             time.sleep(600)
             cls.get_users_list(callback)
@@ -94,19 +116,6 @@ main_widget = """
         size_hint: 1, 1
         size: root.width, root.height
 
-        Button:
-            id: login_button
-            size_hint: 1, None
-            size: root.width, '40dp'
-            text: 'VK login'
-            on_press: root.login()
-
-        Button:
-            id: join_button
-            size_hint: 1, None
-            size: root.width, '40dp'
-            text: 'VK join group'
-            on_press: root.join()
 """
 
 Builder.load_string(main_widget)
@@ -116,13 +125,13 @@ class MainWidget(Widget):
     def __init__(self, *args, **kwargs):
         super(MainWidget, self).__init__(*args, **kwargs)
         # Create private room
-        Api(url='group/?', method='POST', callback=None, group_name='api_test1',
-            group_type='private', users='1,2')
+        # UserApi.create_chat('api-test1', 'private', '1,2', None)
 
         # Create group room
-        Api(url='group/?', method='POST', callback=None, group_name='api_test2',
-            group_type='group', users='1,2')
-
+        # UserApi.create_chat('api-test2', 'group', '3,5,7', None)
+        # UserApi.update_message(None)
+        # UserApi.send_message('1', 'test2', None)
+        UserApi.update_message(None)
 
 if __name__ == '__main__':
     class MainApp(App):

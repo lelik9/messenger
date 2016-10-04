@@ -13,6 +13,7 @@ def write(*, req, msg_type, msg):
         'type': msg_type,
         'result': msg,
     })
+    req.flush()
 
 
 class MessageHandler(tornado.web.RequestHandler):
@@ -25,8 +26,10 @@ class MessageHandler(tornado.web.RequestHandler):
 
         if room:
             room.add_message(user_id=user, message=message)
+            write(req=self, msg_type='success', msg={'status': 'send'})
         else:
-            self.write(dict(error='Chat not found'))
+            # self.send_error(400, error='chat not found')
+            write(req=self, msg_type='error', msg='Chat not found')
 
     @gen.coroutine
     def get(self, *args, **kwargs):
@@ -145,7 +148,7 @@ class ChatHandler(tornado.web.RequestHandler):
         :param kwargs:
         :return:
         """
-
+        # print(args, kwargs, self.get_query_argument('group_name'))
         users = self.get_argument('users').split(',')
         group_name = self.get_argument('group_name')
         group_type = self.get_argument('group_type')
