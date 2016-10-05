@@ -117,9 +117,8 @@ class Room:
                 if waiting is not None:
                     waiting.set_result(self._messages.get_message())
 
-    def change_message_status(self, user, message_id, status):
-        if status == 'true':
-            self._messages.change_status(message_id=message_id, user=user, status=True)
+    def change_message_status(self, user, message_id):
+        self._messages.change_status(message_id=message_id, user=user, status=True)
 
 
 rooms = Rooms()

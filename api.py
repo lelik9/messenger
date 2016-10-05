@@ -46,59 +46,110 @@ class Api(object):
 class UserApi(object):
     user_id = '2'
 
-    @staticmethod
-    def create_chat(name, chat_type, users, callback):
+    @classmethod
+    def create_chat(cls, name, chat_type, users, callback):
+        """
+        Создание чата
+        :param name: Имя чата (если это приватный чат, то имя = имени пользователя с кем чат)
+        :param chat_type: тип чата (private, group)
+        :param users: id пользователей чата (строка вида: '1,2') первый всегда id теккущего
+        пользователя
+        :param callback: callback в который вернется ответ от сервера для работы с GUI
+        """
         def chat_callback(req, response):
-            print('server response: ', response)
             if response['type'] == 'error':
                 on_error(req, response['result'])
-            callback()
+            else:
+                """
+                В response['result'] будет словарь:
+                    {'chat_id': room_id,
+                    'chat_name': group_name}
+                ID и name необходимо где-то хранить
+                """
+                callback(response['result'])
 
         Api(url='/group/', method='POST', callback=chat_callback, group_name=name,
             group_type=chat_type, users=users)
 
     @classmethod
-    def set_delivered(cls,chat_id, message_id):
-        pass
+    def set_delivered(cls, messages):
+        def callback(req, resp):
+            pass
+
+        for k, v in messages.items():
+            Api(url='/message/delivery/', method='GET', callback=callback, chat_id=v['chat_id'],
+                message_id=k, user=cls.user_id)
+
     @classmethod
     def send_message(cls, chat_id, message, callback):
+        """
+        Отправка нового сообщения
+        :param chat_id: id чата
+        :param message: само сообщение
+        :param callback: вызывается, если сообщение успешно отправленно
+        :return:
+        """
         def message_callback(req, response):
-            print('server response: ', response)
             if response['type'] == 'error':
                 on_error(req, response['result'])
-            callback()
+            else:
+                callback()
 
         Api(url='/message/', method='POST', callback=message_callback, user=cls.user_id,
             chat_id=chat_id, message=message)
 
     @classmethod
     def update_message(cls, callback):
+        """
+        Обновление сообщений. Запускать единожды при старте приложения
+        :param callback: В callback передается список сообщений
+        :return:
+        """
         def update_callback(req, response):
-            print('server response: ', response)
             if response['type'] == 'error':
                 on_error(req, response['result'])
-            callback()
+            else:
+                result = response['result']
+
+                cls.set_delivered(result)
+                callback(result)
+                cls.update_message(callback)
 
         Api(url='/message/', method='GET', callback=update_callback, user=cls.user_id)
 
     @classmethod
-    def get_message_range(cls, chat_id, message_id, range, callback):
+    def get_message_range(cls, chat_id, message_id, msg_range, callback):
+        """
+        Получение среза сообщений
+        :param chat_id: id чата
+        :param message_id: последнего сообщения или 0 если выбирать сообщения с последнего
+        :param msg_range: макс. количество возвращаемых сообщений
+        :param callback: В callback передается список сообщений
+        :return:
+        """
         def range_callback(req, response):
-            print('server response: ', response)
             if response['type'] == 'error':
                 on_error(req, response['result'])
-            callback()
+            else:
+                result = response['result']
+
+                cls.set_delivered(result)
+                callback(result)
 
         Api(url='/message/range/', method='GET', callback=range_callback, chat_id=chat_id,
-            user=cls.user_id, last_message=message_id, range=range)
+            user=cls.user_id, last_message=message_id, range=msg_range)
 
     @classmethod
     def get_users_list(cls, callback):
+        """
+        Получение списка пользователей
+        :param callback: В callback передается список всех пользователей, кроме текущего
+        :return:
+        """
         def users_callback(req, response):
-            print('server response: ', response)
             if response['type'] == 'error':
                 on_error(req, response['result'])
-            callback()
+            callback(response['result'])
             time.sleep(600)
             cls.get_users_list(callback)
 

@@ -84,11 +84,16 @@ def get_users_list(user_id):
     return db.session.query(Users.id, Users.nickname).filter(Users.id != user_id).all()
 
 
-def get_last_messages(*, users, range, last):
-    return db.session.query(Messages).filter(ChatRooms.user_id.in_(users),
-                                             Chats.chat_type == 'single',
-                                             Messages.id < last).order_by(Messages.id.desc()).limit(
-        range).all()
+def get_last_messages(*, users, msg_range, last, chat_id):
+    query = db.session.query(Messages).filter(ChatRooms.user_id.in_(users),
+                                              ChatRooms.chat_id == chat_id)
+
+    if last == 0:
+        query = query.filter(Messages.id < last)
+
+    query = query.order_by(Messages.id.desc()).limit(msg_range)
+
+    return query.all()
 
 
 def get_undelivered_users(message_id):
