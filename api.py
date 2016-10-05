@@ -30,7 +30,7 @@ class Api(object):
             raise KeyError('method not found, use "GET" or "POST"')
 
     def get(self, url, **kwargs):
-        params = '&'.join(['='.join([k, v]) for k, v in kwargs.items()])
+        params = '&'.join(['='.join([k, str(v)]) for k, v in kwargs.items()])
         full_url = self.server + url + '?' + params
         UrlRequest(url=full_url, on_success=self.callback, on_error=on_error,
                    on_failure=on_error)
@@ -56,6 +56,7 @@ class UserApi(object):
         пользователя
         :param callback: callback в который вернется ответ от сервера для работы с GUI
         """
+
         def chat_callback(req, response):
             if response['type'] == 'error':
                 on_error(req, response['result'])
@@ -89,11 +90,12 @@ class UserApi(object):
         :param callback: вызывается, если сообщение успешно отправленно
         :return:
         """
+
         def message_callback(req, response):
             if response['type'] == 'error':
                 on_error(req, response['result'])
-            else:
-                callback()
+                # else:
+                #     callback()
 
         Api(url='/message/', method='POST', callback=message_callback, user=cls.user_id,
             chat_id=chat_id, message=message)
@@ -105,6 +107,7 @@ class UserApi(object):
         :param callback: В callback передается список сообщений
         :return:
         """
+
         def update_callback(req, response):
             if response['type'] == 'error':
                 on_error(req, response['result'])
@@ -127,6 +130,7 @@ class UserApi(object):
         :param callback: В callback передается список сообщений
         :return:
         """
+
         def range_callback(req, response):
             if response['type'] == 'error':
                 on_error(req, response['result'])
@@ -146,6 +150,7 @@ class UserApi(object):
         :param callback: В callback передается список всех пользователей, кроме текущего
         :return:
         """
+
         def users_callback(req, response):
             if response['type'] == 'error':
                 on_error(req, response['result'])
@@ -175,14 +180,27 @@ Builder.load_string(main_widget)
 class MainWidget(Widget):
     def __init__(self, *args, **kwargs):
         super(MainWidget, self).__init__(*args, **kwargs)
+
         # Create private room
         # UserApi.create_chat('api-test1', 'private', '1,2', None)
 
         # Create group room
         # UserApi.create_chat('api-test2', 'group', '3,5,7', None)
         # UserApi.update_message(None)
-        # UserApi.send_message('1', 'test2', None)
-        UserApi.update_message(None)
+        # for i in range(5):
+        #     UserApi.send_message('1', 'test3'+str(i), None)
+        #     UserApi.send_message('2', 'test4'+str(i), None)
+
+        # UserApi.update_message(None)
+        def call(res):
+            pass
+            # for k, v in res.items():
+            #     print(v['message'])
+
+        UserApi.get_message_range(chat_id=1, message_id=4, msg_range=100, callback=call)
+        UserApi.get_message_range(chat_id=2, message_id=0, msg_range=100, callback=call)
+
+
 
 if __name__ == '__main__':
     class MainApp(App):

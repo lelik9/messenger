@@ -81,12 +81,11 @@ class UsersListHandler(tornado.web.RequestHandler):
 
 class MessageRangeHandler(tornado.web.RequestHandler):
     def get(self, *args, **kwargs):
-        users = self.get_argument('users').split(',')
-        range = int(self.get_argument('range'))
+        msg_range = int(self.get_argument('range'))
         last_message = int(self.get_argument('last_message'))
         chat_id = int(self.get_argument('chat_id'))
 
-        messages = models_function.get_last_messages(users=users, msg_range=range,
+        messages = models_function.get_last_messages(msg_range=msg_range,
                                                      last=last_message, chat_id=chat_id)
 
         msg = gen_messages(messages)

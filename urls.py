@@ -1,7 +1,7 @@
 # coding=utf-8
 import tornado.web
 
-from handler import MessageHandler, MessageUpdatesHandler, MessageDeliverHandler, \
+from handler import MessageHandler, MessageDeliverHandler, \
     UsersListHandler, MessageRangeHandler, ChatHandler
 
 

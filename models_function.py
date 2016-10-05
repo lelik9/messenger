@@ -84,11 +84,10 @@ def get_users_list(user_id):
     return db.session.query(Users.id, Users.nickname).filter(Users.id != user_id).all()
 
 
-def get_last_messages(*, users, msg_range, last, chat_id):
-    query = db.session.query(Messages).filter(ChatRooms.user_id.in_(users),
-                                              ChatRooms.chat_id == chat_id)
+def get_last_messages(*, msg_range, last, chat_id):
+    query = db.session.query(Messages).filter(Messages.chat_id == chat_id)
 
-    if last == 0:
+    if last != 0:
         query = query.filter(Messages.id < last)
 
     query = query.order_by(Messages.id.desc()).limit(msg_range)
