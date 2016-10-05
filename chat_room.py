@@ -22,20 +22,6 @@ class Rooms:
         for room in rooms:
             self.register_room(room)
 
-    # def get_user_room(self, users):
-    #     room = models_function.get_room_id(users)
-    #     print(room.id)
-    #
-    #     if not room:
-    #         room = self.create_user_room(users)
-    #
-    #     if room.id not in self.all_rooms.keys():
-    #         room = self.register_user_room(room.id, users)
-    #     else:
-    #         room = self.all_rooms.get(room.id)
-    #
-    #     return room
-    #
     def register_room(self, room_model):
         if room_model:
             room_id = room_model.id
@@ -45,19 +31,6 @@ class Rooms:
             new_room = Room(users=users, room_id=room_id, room_type=room_type)
             self.all_rooms.update({room_id: new_room})
             return new_room
-    #
-    # def register_user_room(self, room_id, users):
-    #     new_room = Room(users=users, room_id=room_id)
-    #     new_room.id = room_id
-    #     self.all_rooms.update({room_id: new_room})
-    #
-    #     return new_room
-    #
-    # @staticmethod
-    # def create_user_room(users):
-    #     chat = models_function.create_chat_room('', 'single')
-    #     models_function.add_chat_room(chat.id, users)
-    #     return chat
 
     def get_room(self, room_id):
         if room_id in self.all_rooms.keys():
