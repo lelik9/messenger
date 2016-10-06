@@ -114,7 +114,6 @@ class ChatHandler(tornado.web.RequestHandler):
         :param kwargs:
         :return:
         """
-        # print(args, kwargs, self.get_query_argument('group_name'))
         users = self.get_argument('users').split(',')
         group_name = self.get_argument('group_name')
         group_type = self.get_argument('group_type')
@@ -122,3 +121,16 @@ class ChatHandler(tornado.web.RequestHandler):
         room_id = rooms.create_group_room(users=users, group_name=group_name, group_type=group_type)
 
         write(req=self, msg_type='success', msg={'chat_id': room_id, 'chat_name': group_name})
+
+
+class ChangeChatHandler(tornado.web.RequestHandler):
+    def get(self, *args, **kwargs):
+        """
+        Rename chat. Only for group chat
+        :param args:
+        :param kwargs:
+        :return:
+        """
+        group_name = self.get_argument('group_name')
+        group_type = self.get_argument('chat_id')
+

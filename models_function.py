@@ -122,3 +122,13 @@ def get_rooms_list(user):
                                                  tbl1.chat_id == tbl2.chat_id).group_by(
         tbl1.chat_id).all()
     return query
+
+
+def rename_chat(chat_id, chat_name):
+    try:
+        chat = db.session.query(Chats).filter(Chats.id == chat_id).one()
+        chat.name = chat_name
+        db.session.dirty
+        db.session.commit()
+    except exc.NoResultFound:
+        return False
