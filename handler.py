@@ -102,14 +102,10 @@ class ChatHandler(tornado.web.RequestHandler):
         :return:
         """
 
-        # STUB!
-        users = self.get_argument('users').split(',')
-        group_name = self.get_argument('group_name')
-        group_type = self.get_argument('group_type')
+        user = self.get_argument('user')
 
-        room_id = rooms.create_group_room(users=users, group_name=group_name, group_type=group_type)
-
-        write(req=self, msg_type='group', msg={'room_id': room_id})
+        res = models_function.get_rooms_list(user)
+        write(req=self, msg_type='success', msg=res)
 
     def post(self, *args, **kwargs):
         """

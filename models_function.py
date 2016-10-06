@@ -1,5 +1,6 @@
 # coding=utf-8
 from sqlalchemy.orm import exc
+from sqlalchemy.orm import aliased
 from datetime import datetime
 
 from db_func import db
@@ -98,3 +99,26 @@ def get_last_messages(*, msg_range, last, chat_id):
 def get_undelivered_users(message_id):
     return db.session.query(DeliverMessage.user_id).filter(DeliverMessage.message_id == message_id,
                                                            DeliverMessage.deliver == 0).all()
+
+
+def find_users_room(users):
+    tbl1 = aliased(ChatRooms)
+    tbl2 = aliased(ChatRooms)
+    try:
+        res = db.session.query(tbl1.chat_id).filter(tbl1.user_id == users[0],
+                                                    tbl2.user_id == users[1],
+                                                    tbl1.chat_id == tbl2.chat_id).one()
+        return res[0]
+    except exc.NoResultFound:
+        return None
+
+
+def get_rooms_list(user):
+    tbl1 = aliased(ChatRooms)
+    tbl2 = aliased(ChatRooms)
+    query = db.session.query(tbl2.chat_id, Chats.chat_name, Chats.chat_type, Users.nickname)
+    query = query.join(Chats).join(Users).filter(tbl1.user_id == user,
+                                                 tbl2.user_id != user,
+                                                 tbl1.chat_id == tbl2.chat_id).group_by(
+        tbl1.chat_id).all()
+    return query

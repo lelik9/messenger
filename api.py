@@ -154,11 +154,22 @@ class UserApi(object):
         def users_callback(req, response):
             if response['type'] == 'error':
                 on_error(req, response['result'])
-            callback(response['result'])
-            time.sleep(600)
-            cls.get_users_list(callback)
+            else:
+                callback(response['result'])
+            # time.sleep(600)
+            # cls.get_users_list(callback)
 
         Api(url='/users/', method='GET', callback=users_callback, user=cls.user_id)
+
+    @classmethod
+    def get_chats_list(cls, callback):
+        def chat_callback(req, response):
+            if response['type'] == 'error':
+                on_error(req, response['result'])
+            else:
+                callback(response['result'])
+
+        Api(url='/group/', method='GET', callback=chat_callback, user=cls.user_id)
 
 
 from kivy.lang import Builder
