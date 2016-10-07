@@ -131,6 +131,56 @@ class ChangeChatHandler(tornado.web.RequestHandler):
         :param kwargs:
         :return:
         """
-        group_name = self.get_argument('group_name')
-        group_type = self.get_argument('chat_id')
+        chat_name = self.get_argument('chat_name')
+        chat_id = self.get_argument('chat_id')
 
+        result = models_function.rename_chat(chat_id=chat_id, chat_name=chat_name)
+
+        if not result:
+            write(req=self, msg_type='error', msg='Chat rename failed')
+
+    def post(self, *args, **kwargs):
+        """
+        Delete chat
+        :param args:
+        :param kwargs:
+        :return:
+        """
+        chat_id = self.get_argument('chat_id')
+
+        result = models_function.mark_delete_chat(chat_id=chat_id)
+
+        if not result:
+            write(req=self, msg_type='error', msg='Chat remove failed')
+        else:
+            write(req=self, msg_type='success', msg='Chat remove OK')
+
+
+class ChatUserChangeHandler(tornado.web.RequestHandler):
+    def get(self, *args, **kwargs):
+        """
+        Ivite user to group chat
+        :param args:
+        :param kwargs:
+        :return:
+        """
+        chat_id = self.get_argument('chat_id')
+        user = self.get_argument('user')
+
+        result = models_function.invite_user(user_id=user, chat_id=chat_id)
+
+        if not result:
+            write(req=self, msg_type='error', msg='Invite user failed')
+        else:
+            write(req=self, msg_type='success', msg='User invited')
+
+    def post(self, *args, **kwargs):
+        chat_id = self.get_argument('chat_id')
+        user = self.get_argument('user')
+
+        result = models_function.remove_user_from_chat(user_id=user, chat_id=chat_id)
+
+        if not result:
+            write(req=self, msg_type='error', msg='Remove user from chat failed')
+        else:
+            write(req=self, msg_type='success', msg='User deleted from chat')

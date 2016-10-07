@@ -2,7 +2,7 @@
 from datetime import datetime
 from sqlalchemy import Column, ForeignKey, Integer, String, Text, DateTime, Boolean
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, backref
 
 Base = declarative_base()
 
@@ -12,6 +12,17 @@ class Users(Base):
 
     id = Column(Integer(), primary_key=True)
     nickname = Column(String(50), nullable=False, default='Новенький')
+    active = Column(Boolean(), nullable=False, default=True)
+
+
+class UsersAuth(Base):
+    __tablename__ = 'users_auth'
+
+    id = Column(Integer(), primary_key=True)
+    user_id = Column(Integer(), ForeignKey('users.id'))
+    uuid = Column(String(100), nullable=False,)
+    token = Column(String(100), nullable=False)
+    user = relationship(Users,  backref=backref('users', cascade="all, delete"))
 
 
 class Chats(Base):
@@ -20,6 +31,7 @@ class Chats(Base):
     id = Column(Integer(), primary_key=True)
     chat_name = Column(String(50), nullable=True,)
     chat_type = Column(String(10), nullable=False, default='single')
+    active = Column(Boolean(), nullable=False, default=True)
 
 
 class ChatRooms(Base):
@@ -28,8 +40,8 @@ class ChatRooms(Base):
     id = Column(Integer(), primary_key=True)
     user_id = Column(Integer(), ForeignKey('users.id'))
     chat_id = Column(Integer(), ForeignKey('chats.id'))
-    user = relationship(Users)
-    chat = relationship(Chats)
+    user = relationship(Users, cascade="all, delete")
+    chat = relationship(Chats, backref=backref('chats', cascade="all, delete"))
 
 
 class Messages(Base):
@@ -39,9 +51,9 @@ class Messages(Base):
     message = Column(Text(), nullable=False)
     date = Column(DateTime(), nullable=False, default=datetime.now())
     sender_id = Column(Integer(), ForeignKey('users.id'))
-    user = relationship(Users)
+    user = relationship(Users, cascade="all, delete")
     chat_id = Column(Integer(), ForeignKey('chats.id'))
-    chat = relationship(Chats)
+    chat = relationship(Chats,)# backref=backref('chats', cascade="all, delete"))
 
 
 class DeliverMessage(Base):
@@ -50,4 +62,6 @@ class DeliverMessage(Base):
     id = Column(Integer(), primary_key=True)
     deliver = Column(Boolean(), nullable=False, default=False)
     user_id = Column(Integer(), ForeignKey('users.id'))
+    user = relationship(Users, cascade="all, delete")
     message_id = Column(Integer(), ForeignKey('messages.id'))
+    message = relationship(Messages, cascade="all, delete")

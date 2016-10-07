@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>User list</title>
+</head>
+<body>
+    <div align="center">
+        <form method="post">
+            <p>Name   <input name="user_name"></p>
+            <p>UUID   <input name="user_uuid"></p>
+          {% module xsrf_form_html() %}
+            <input type="submit">
+        </form>
+    </div>
+    <p></p>
+    <div>
+        <form method="post" action="/users/delete/">
+            <button type="submit">Удалить</button>
+            <table width="70%" align="center">
+                <tr>
+                    <th>ID</th>
+                    <th>User</th>
+                </tr>
+                {% for user in users %}
+                <tr align="center">
+                    <td><input type="radio" name="user_id" value="{{ user[0] }}">{{ user[0] }}</td>
+                    <td>{{ user[1] }}</td>
+                </tr>
+                {% end %}
+            </table>
+        </form>
+    </div>
+</body>
+</html>

@@ -10,7 +10,7 @@ def create_db():
 
 def fill_users():
     for i in range(10):
-        models_function.add_user('User'+str(i))
+        models_function.add_user('User'+str(i), str(i+1234))
 
 
 if __name__ == '__main__':
