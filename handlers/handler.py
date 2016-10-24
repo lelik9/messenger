@@ -1,10 +1,15 @@
 # coding=utf-8
+import common
+
+import json
 import time
 import tornado.web
 
-import models_function
-
 from chat_room import rooms
+from db import models_function
+
+from os import makedirs
+from os.path import exists
 from tornado import gen
 
 
@@ -23,26 +28,45 @@ def gen_messages(messages):
         msg.update({message.id: {
             'ts': time.mktime(message.date.timetuple()),
             'message': message.message,
-            'sender': message.user.nickname,
-            'chat_id': message.chat_id
+            'sender': message.sender_id,
+            'chat_id': message.chat_id,
+            'file': message.file,
         }})
 
     return msg
 
 
-class MessageHandler(tornado.web.RequestHandler):
+def add_message(req, user, chat_id, message, file):
+    room = rooms.get_room(chat_id)
+
+    if room:
+        room.add_message(user_id=user, message=message, file=file)
+        write(req=req, msg_type='success', msg={'status': 'send'})
+    else:
+        write(req=req, msg_type='error', msg='Chat not found')
+
+
+class BaseHandler(tornado.web.RequestHandler):
+    def prepare(self):
+        try:
+            auth = self.request.headers.get('Authorization').split('=')
+            user = auth[0]
+            token = auth[1]
+
+            # if not models_function.check_user_token(user_id=user, token=token):
+            #     self.send_error(401)
+        except AttributeError:
+            pass
+            # self.send_error(401)
+
+
+class MessageHandler(BaseHandler):
     def post(self):
         user = self.get_argument('user')
         message = self.get_argument('message')
         chat_id = self.get_argument('chat_id')
 
-        room = rooms.get_room(chat_id)
-
-        if room:
-            room.add_message(user_id=user, message=message)
-            write(req=self, msg_type='success', msg={'status': 'send'})
-        else:
-            write(req=self, msg_type='error', msg='Chat not found')
+        add_message(req=self, user=user, chat_id=chat_id, message=message, file='0')
 
     @gen.coroutine
     def get(self, *args, **kwargs):
@@ -50,7 +74,7 @@ class MessageHandler(tornado.web.RequestHandler):
         messages = models_function.get_user_undelivered_message(user)
 
         if messages:
-            message = gen_messages(messages)
+            message = {'type': 'message', 'messages': gen_messages(messages)}
         else:
             waiting = rooms.add_waiting(user)
             message = yield waiting
@@ -58,28 +82,26 @@ class MessageHandler(tornado.web.RequestHandler):
         write(req=self, msg_type='success', msg=message)
 
 
-class MessageDeliverHandler(tornado.web.RequestHandler):
-    def get(self, *args, **kwargs):
-        message_id = int(self.get_argument('message_id'))
+class MessageDeliverHandler(BaseHandler):
+    def post(self, *args, **kwargs):
+        messages = json.loads(self.get_argument('messages'))
         user = int(self.get_argument('user'))
-        chat_id = self.get_argument('chat_id')
 
-        room = rooms.get_room(chat_id)
+        for k, v in messages.items():
+            room = rooms.get_room(v['chat_id'])
 
-        if room:
-            room.change_message_status(user=user, message_id=message_id)
+            if room:
+                room.change_message_status(user=user, message_id=int(k))
 
 
-class UsersListHandler(tornado.web.RequestHandler):
+class UsersListHandler(BaseHandler):
     def get(self, *args, **kwargs):
-        user = self.get_argument('user')
-
-        users = models_function.get_users_list(user)
+        users = rooms.get_users()
 
         write(req=self, msg_type='success', msg=users)
 
 
-class MessageRangeHandler(tornado.web.RequestHandler):
+class MessageRangeHandler(BaseHandler):
     def get(self, *args, **kwargs):
         msg_range = int(self.get_argument('range'))
         last_message = int(self.get_argument('last_message'))
@@ -93,7 +115,7 @@ class MessageRangeHandler(tornado.web.RequestHandler):
         write(req=self, msg_type='message', msg=msg)
 
 
-class ChatHandler(tornado.web.RequestHandler):
+class ChatHandler(BaseHandler):
     def get(self, *args, **kwargs):
         """
         Get users chat rooms.
@@ -114,6 +136,7 @@ class ChatHandler(tornado.web.RequestHandler):
         :param kwargs:
         :return:
         """
+        # print(args, kwargs, self.get_query_argument('group_name'))
         users = self.get_argument('users').split(',')
         group_name = self.get_argument('group_name')
         group_type = self.get_argument('group_type')
@@ -123,7 +146,7 @@ class ChatHandler(tornado.web.RequestHandler):
         write(req=self, msg_type='success', msg={'chat_id': room_id, 'chat_name': group_name})
 
 
-class ChangeChatHandler(tornado.web.RequestHandler):
+class ChangeChatHandler(BaseHandler):
     def get(self, *args, **kwargs):
         """
         Rename chat. Only for group chat
@@ -136,7 +159,9 @@ class ChangeChatHandler(tornado.web.RequestHandler):
 
         result = models_function.rename_chat(chat_id=chat_id, chat_name=chat_name)
 
-        if not result:
+        if result:
+            write(req=self, msg_type='success', msg='ok')
+        else:
             write(req=self, msg_type='error', msg='Chat rename failed')
 
     def post(self, *args, **kwargs):
@@ -156,7 +181,7 @@ class ChangeChatHandler(tornado.web.RequestHandler):
             write(req=self, msg_type='success', msg='Chat remove OK')
 
 
-class ChatUserChangeHandler(tornado.web.RequestHandler):
+class ChatUserChangeHandler(BaseHandler):
     def get(self, *args, **kwargs):
         """
         Ivite user to group chat
@@ -184,3 +209,37 @@ class ChatUserChangeHandler(tornado.web.RequestHandler):
             write(req=self, msg_type='error', msg='Remove user from chat failed')
         else:
             write(req=self, msg_type='success', msg='User deleted from chat')
+
+
+class FileHadler(BaseHandler):
+    def post(self, *args, **kwargs):
+        user = int(self.get_argument('user'))
+        chat_id = self.get_argument('chat_id')
+        file_name = self.get_argument('file_name')
+
+        new_file = models_function.add_file(file_name)
+        uuid = new_file.id
+
+        if not exists(common.DATA_PATH):
+            makedirs(common.DATA_PATH)
+
+        with open(common.DATA_PATH + '/' + uuid, 'wb') as f:
+            res = self.request.body
+            f.write(res)
+
+        add_message(req=self, user=user, chat_id=chat_id, message=file_name, file=uuid)
+
+    def get(self, *args, **kwargs):
+        file_id = self.get_argument('file_id')
+
+        with open(common.DATA_PATH + '/' + file_id, 'rb') as f:
+            self.write(f.read())
+
+
+class ChangeUserStatus(BaseHandler):
+    def get(self, *args, **kwargs):
+        user = int(self.get_argument('user'))
+        chat_id = self.get_argument('chat_id')
+
+        room = rooms.get_room(chat_id)
+        room.change_user_status(user_id=user)

@@ -20,16 +20,16 @@ class UsersAuth(Base):
 
     id = Column(Integer(), primary_key=True)
     user_id = Column(Integer(), ForeignKey('users.id'))
-    uuid = Column(String(100), nullable=False,)
+    uuid = Column(String(100), nullable=False, )
     token = Column(String(100), nullable=False)
-    user = relationship(Users,  backref=backref('users', cascade="all, delete"))
+    user = relationship(Users, backref=backref('users', cascade="all, delete"))
 
 
 class Chats(Base):
     __tablename__ = 'chats'
 
     id = Column(Integer(), primary_key=True)
-    chat_name = Column(String(50), nullable=True,)
+    chat_name = Column(String(50), nullable=True, )
     chat_type = Column(String(10), nullable=False, default='single')
     active = Column(Boolean(), nullable=False, default=True)
 
@@ -50,10 +50,11 @@ class Messages(Base):
     id = Column(Integer(), primary_key=True)
     message = Column(Text(), nullable=False)
     date = Column(DateTime(), nullable=False, default=datetime.now())
+    file = Column(Text(), nullable=False, default='0')
     sender_id = Column(Integer(), ForeignKey('users.id'))
     user = relationship(Users, cascade="all, delete")
     chat_id = Column(Integer(), ForeignKey('chats.id'))
-    chat = relationship(Chats,)# backref=backref('chats', cascade="all, delete"))
+    chat = relationship(Chats, )
 
 
 class DeliverMessage(Base):
@@ -65,3 +66,10 @@ class DeliverMessage(Base):
     user = relationship(Users, cascade="all, delete")
     message_id = Column(Integer(), ForeignKey('messages.id'))
     message = relationship(Messages, cascade="all, delete")
+
+
+class Files(Base):
+    __tablename__ = 'files'
+
+    id = Column(Text(), primary_key=True)
+    name = Column(String(10), nullable=False)

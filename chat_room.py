@@ -1,12 +1,74 @@
 # coding=utf-8
-import functools
-import models_function
-import random
-
-from collections import namedtuple
 from tornado.concurrent import Future
 
+from db import models_function
 from message import BaseMessage
+
+
+def send_waiter(users, user_id, result):
+    for user in users:
+        if user != int(user_id):
+            waiting = rooms.get_waiting(str(user))
+            if waiting is not None:
+                waiting.set_result(result)
+
+
+class Room:
+    status = ''
+
+    def __init__(self, *, users, room_id, room_type='private'):
+        self.id = room_id
+        self.users = users
+        self.room_type = room_type
+        self._messages = BaseMessage(self.id, self.users)
+
+    def add_message(self, message, user_id, file):
+        message_id = self._messages.add_message(message=message, user_id=user_id, chat_id=self.id,
+                                                file=file)
+
+        for user in self.users:
+            if user != int(user_id):
+                self._messages.change_status(message_id=message_id, user=user, status=False)
+                waiting = rooms.get_waiting(str(user))
+
+                if waiting is not None:
+                    waiting.set_result({'type': 'message', 'messages': self._messages.get_message()})
+
+    def change_message_status(self, user, message_id):
+        self._messages.change_status(message_id=message_id, user=user, status=True)
+
+    def change_user_status(self, user_id):
+        send_waiter(users=self.users, user_id=user_id, result={'type': 'status', 'typing': 1})
+
+
+class Users:
+    users_status = {}
+
+    def __init__(self):
+        self.generate_list()
+
+    def generate_list(self):
+        for user in models_function.get_users_list():
+            self.users_status.update({
+                user[0]: {
+                    'nick': user[1],
+                    'status': 0
+                }
+            })
+
+    def change_status(self, user_id, status):
+        user_id = int(user_id)
+        if user_id in self.users_status.keys():
+
+            self.users_status[user_id]['status'] = status
+        else:
+            self.generate_list()
+            self.users_status[user_id]['status'] = status
+
+        send_waiter(users=self.users_status.keys(), user_id=user_id, result={'type': 'status', 'online': status})
+
+    def get_users(self):
+        return self.users_status
 
 
 class Rooms:
@@ -21,6 +83,10 @@ class Rooms:
         print(rooms)
         for room in rooms:
             self.register_room(room)
+        self._users = Users()
+
+    def get_users(self):
+        return self._users.get_users()
 
     def register_room(self, room_model):
         if room_model:
@@ -61,6 +127,8 @@ class Rooms:
         """
         waiting = Future()
         self.pending.update({id: waiting})
+        self._users.change_status(id, 1)
+        print('waiting: {}'.format(self.pending))
         return waiting
 
     def del_waiting(self, id):
@@ -72,32 +140,11 @@ class Rooms:
         waiting = self.pending.pop(id)
         # Set an empty result to unblock any coroutines waiting.
         waiting.set_result([])
+        self._users.change_status(id, 0)
 
     def get_waiting(self, wait_id):
         if wait_id in self.pending.keys():
             return self.pending.pop(wait_id)
-
-
-class Room:
-
-    def __init__(self, *, users, room_id, room_type='private'):
-        self.id = room_id
-        self.users = users
-        self.room_type = room_type
-        self._messages = BaseMessage(self.id, self.users)
-
-    def add_message(self, message, user_id):
-        message_id = self._messages.add_message(message=message, user_id=user_id, chat_id=self.id)
-
-        for user in self.users:
-            if user != int(user_id):
-                self._messages.change_status(message_id=message_id, user=user, status=False)
-                waiting = rooms.get_waiting(str(user))
-                if waiting is not None:
-                    waiting.set_result(self._messages.get_message())
-
-    def change_message_status(self, user, message_id):
-        self._messages.change_status(message_id=message_id, user=user, status=True)
 
 
 rooms = Rooms()

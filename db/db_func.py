@@ -2,6 +2,8 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+from common import SQLITE_FILE_PATH
+
 
 class DB(object):
 
@@ -10,7 +12,7 @@ class DB(object):
         self.session = self._get_session(self.engine)
 
     def _make_connection(self):
-        return create_engine('sqlite:///sql.db')
+        return create_engine('sqlite:///'+SQLITE_FILE_PATH)
 
     def _get_session(self, engine):
         DBSession = sessionmaker(bind=engine)

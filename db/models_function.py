@@ -1,19 +1,21 @@
 # coding=utf-8
 import hashlib
-from sqlalchemy.orm import exc
-from sqlalchemy.orm import aliased
+import uuid
 from datetime import datetime
 
-from db_func import db
-from models import Messages, Users, UsersAuth, Chats, ChatRooms, DeliverMessage
+from .db_func import db
+from sqlalchemy.orm import aliased
+from sqlalchemy.orm import exc
+
+from db.models import Messages, Users, UsersAuth, Chats, ChatRooms, DeliverMessage, Files
 
 
-def add_message(*, message, user_id, chat_id):
-    print(message, user_id, chat_id)
+def add_message(*, message, user_id, chat_id, file):
     new_message = Messages(message=message,
                            date=datetime.now(),
                            sender_id=user_id,
-                           chat_id=chat_id)
+                           chat_id=chat_id,
+                           file=file)
     db.add(new_message)
     return new_message
 
@@ -77,12 +79,20 @@ def delete_user(user_id):
         return False
 
 
-def get_user_token(user_id, uuid):
+def get_user_token(uuid):
     try:
-        return db.session.query(UsersAuth.token).filter(UsersAuth.id == user_id,
-                                                        UsersAuth.uuid == uuid,
-                                                        Users.id == user_id,
-                                                        Users.active == 1).one()
+        return db.session.query(UsersAuth.token, UsersAuth.user_id).filter(UsersAuth.uuid == uuid,
+                                                                           Users.id == UsersAuth.user_id,
+                                                                           Users.active == 1).one()
+    except exc.NoResultFound:
+        return False
+
+
+def check_user_token(user_id, token):
+    try:
+        db.session.query(UsersAuth).filter(UsersAuth.user_id == user_id,
+                                           UsersAuth.token == token).one()
+        return True
     except exc.NoResultFound:
         return False
 
@@ -131,9 +141,8 @@ def change_message_status(message_id, user_id):
         return False
 
 
-def get_users_list(user_id):
-    return db.session.query(Users.id, Users.nickname).filter(Users.id != user_id,
-                                                             Users.active == 1).all()
+def get_users_list():
+    return db.session.query(Users.id, Users.nickname).filter(Users.active == 1).all()
 
 
 def get_last_messages(*, msg_range, last, chat_id):
@@ -158,7 +167,9 @@ def find_users_room(users):
     try:
         res = db.session.query(tbl1.chat_id).filter(tbl1.user_id == users[0],
                                                     tbl2.user_id == users[1],
-                                                    tbl1.chat_id == tbl2.chat_id).one()
+                                                    tbl1.chat_id == tbl2.chat_id,
+                                                    tbl1.chat_id == Chats.id,
+                                                    Chats.chat_type == 'private').one()
         return res[0]
     except exc.NoResultFound:
         return None
@@ -178,7 +189,7 @@ def get_rooms_list(user):
 def rename_chat(chat_id, chat_name):
     try:
         chat = db.session.query(Chats).filter(Chats.id == chat_id).one()
-        chat.name = chat_name
+        chat.chat_name = chat_name
         db.session.dirty
         db.session.commit()
         return True
@@ -226,4 +237,19 @@ def remove_user_from_chat(user_id, chat_id):
         db.session.commit()
         return True
     except exc.NoResultFound:
+        return False
+
+
+def add_file(file_name):
+    try:
+        while True:
+            uu_id = '-'.join((str(uuid.uuid4()), str(uuid.uuid1())))
+            try:
+                db.session.query(Files).filter(Files.id == uu_id).one()
+            except exc.NoResultFound:
+
+                new_file = Files(name=file_name, id=uu_id)
+                db.add(new_file)
+                return new_file
+    except Exception:
         return False
